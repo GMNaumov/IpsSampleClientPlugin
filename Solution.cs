@@ -1,5 +1,8 @@
-﻿using Intermech.Bars;
+﻿using Intermech;
+using Intermech.Bars;
+using IPSClientNavigator = Intermech.Navigator;
 using Intermech.Interfaces;
+using Intermech.Interfaces.Client;
 using Intermech.Interfaces.Plugins;
 using System;
 using System.Windows.Forms;
@@ -110,6 +113,11 @@ namespace IpsSampleClientPlugin
             menuButton.BeginGroup = true;
 
             MenuButtonItem menuButtonChildOne = new MenuButtonItem("Пример кнопки подменю #1");
+            
+            // Определяем обработчик события нажатия на созданную кнопку
+            menuButtonChildOne.Click += new EventHandler(CreateNewIpsObject);
+            
+
             MenuButtonItem menuButtonChildTwo = new MenuButtonItem("Пример кнопки подменю #2");
 
             menuButton.Items.Add(menuButtonChildOne);
@@ -127,6 +135,48 @@ namespace IpsSampleClientPlugin
 
         }
 
+        /// <summary>
+        /// Пример создания нового объекта
+        /// </summary>
+        private static void CreateNewIpsObject(object sender, EventArgs eventArgs)
+        {
+            // Получаем из контейнера сервисов ссылку на сервис для создания новых объектов IPS
+            IObjectCreatorService ipsCreatorService = ApplicationServices.Container.GetService(typeof(IObjectCreatorService)) as IObjectCreatorService;
+
+            // Вызов мастера создания новых объектов с получением идентификатора версии создаваемого объекта
+            long createdObjectId = ipsCreatorService.CreateObjectDialog();
+
+            // Выходим, если новый объект не создан
+            if (createdObjectId == Intermech.Consts.UnknownObjectId || createdObjectId == -1)
+            {
+                return;
+            }
+
+            // Получаем из контейнера сервисов ссылку на сервис уведомлений IPS
+            // NB: приведены два примера для получения ссылки - "из документации" (закомментирован) и найденный с помощью подсказок Visual Studio. Второй симпатишнее что ли...
+            // INotificationService ipsNotificationService = ApplicationServices.Container.GetService(typeof(INotificationService)) as INotificationService;
+            INotificationService ipsNotificationService = ApplicationServices.Container.GetService<INotificationService>();
+            
+            // Создаём уведомление о том, что новый объект создан
+            // Очень увлекательно поизучать статический класс NotificationEventNames
+            DBObjectsEventArgs dBObjectsEventArgs = new DBObjectsEventArgs(NotificationEventNames.ObjectsCreated, createdObjectId);
+
+            // Уведомление для клиента IPS о создании нового объекта
+            ipsNotificationService.FireEvent(null, dBObjectsEventArgs);
+
+            // Создаём дескриптор нового окна IPS
+            IPSClientNavigator.DBObjects.Descriptor descriptor = new IPSClientNavigator.DBObjects.Descriptor(createdObjectId);
+
+            // Открываем созданный объект в новом окне навигатора IPS
+            IPSClientNavigator.Utils.OpenNewWindow(descriptor, null);
+        }
+
+        /// <summary>
+        /// Простой вывод окна WinForms
+        /// Очень помогает, когда нужно проверить, работает ли что-то, или нет
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private static void ShowHelloMessage(object sender, EventArgs e)
         {
             MessageBox.Show("Это сообщение вызвано обработчиком события IPS");
