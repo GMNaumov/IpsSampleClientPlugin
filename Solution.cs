@@ -1,4 +1,5 @@
 ﻿using Intermech.Bars;
+using Intermech.Interfaces;
 using Intermech.Interfaces.Plugins;
 using System;
 using System.Windows.Forms;
@@ -8,7 +9,7 @@ namespace IpsSampleClientPlugin
     public class Solution : IPackage
     {
         // Имя, отображаемое в описании модуля расширения 
-        public string Name => "Мой первый плагин IPS";
+        public string Name => "Пример клиентского расширения IPS";
 
         internal static IServiceProvider ipsServiseProvider;
 
@@ -17,9 +18,22 @@ namespace IpsSampleClientPlugin
         {
             ipsServiseProvider = serviceProvider;
 
+            ShowMessageInOutputView();
+
             AddNewMenuWithButtons();
 
             AddNewButtonInExistsMenu();
+
+            AddNewButtonInExistsMenuWithChilds();
+        }
+
+        /// <summary>
+        /// Пример вывода сообщения в окне "Вывод" главного окна IPS
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        private void ShowMessageInOutputView()
+        {
+            
         }
 
         /// <summary>
@@ -66,21 +80,42 @@ namespace IpsSampleClientPlugin
             // Поиск существующего элемента меню по значению свойства CommandName
             MenuItemBase menuItem = menuBar.FindMenuBar("MenuElementSample");
 
-            if (menuItem != null)
-            {
-                MessageBox.Show("Элемент меню найден!");
-
-                MenuButtonItem menuButton = new MenuButtonItem("Пример кнопки в меню #3",
+            // Создавние новой кнопки с передачей в конструктор обработчика события нажатия
+            MenuButtonItem menuButton = new MenuButtonItem("Пример кнопки в меню #2",
                     new EventHandler(ShowHelloMessage));
 
-                menuButton.CommandName = "MenuButtonSampleTwo";
+            menuButton.CommandName = "MenuButtonSampleTwo";
 
-                menuItem.Items.Add(menuButton);
-            }
-            else
-            {
-                MessageBox.Show("Элемент меню не найден...");
-            }
+            menuItem.Items.Add(menuButton);
+        }
+
+        /// <summary>
+        /// Пример добавления элемента в существующее меню IPS, с "дочерними" кнопками
+        /// </summary>
+        private void AddNewButtonInExistsMenuWithChilds()
+        {
+            BarManager barManager = ipsServiseProvider.GetService(typeof(BarManager)) as BarManager;
+
+            MenuBar menuBar = barManager.MenuBar;
+
+            // Поиск существующего элемента меню по значению свойства CommandName
+            MenuItemBase menuItem = menuBar.FindMenuBar("MenuElementSample");
+
+            // Создавние новой кнопки с передачей в конструктор обработчика события нажатия
+            MenuButtonItem menuButton = new MenuButtonItem("Пример кнопки в меню #3");
+
+            menuButton.CommandName = "MenuButtonSampleWithGroup";
+
+            // Определяет, будет ли элемент начинать новую группу в меню
+            menuButton.BeginGroup = true;
+
+            MenuButtonItem menuButtonChildOne = new MenuButtonItem("Пример кнопки подменю #1");
+            MenuButtonItem menuButtonChildTwo = new MenuButtonItem("Пример кнопки подменю #2");
+
+            menuButton.Items.Add(menuButtonChildOne);
+            menuButton.Items.Add(menuButtonChildTwo);
+
+            menuItem.Items.Add(menuButton);
         }
 
         /// <summary>
