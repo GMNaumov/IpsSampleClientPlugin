@@ -36,7 +36,7 @@ namespace IpsSampleClientPlugin
         /// <exception cref="NotImplementedException"></exception>
         private void ShowMessageInOutputView()
         {
-            
+
         }
 
         /// <summary>
@@ -113,12 +113,12 @@ namespace IpsSampleClientPlugin
             menuButton.BeginGroup = true;
 
             MenuButtonItem menuButtonChildOne = new MenuButtonItem("Пример кнопки подменю #1");
-            
+
             // Определяем обработчик события нажатия на созданную кнопку
-            menuButtonChildOne.Click += new EventHandler(CreateNewIpsObject);
-            
+            menuButtonChildOne.Click += new EventHandler(CreateNewIpsObjectWithDialogWindow);
 
             MenuButtonItem menuButtonChildTwo = new MenuButtonItem("Пример кнопки подменю #2");
+            menuButtonChildTwo.Click += new EventHandler(CreateNewObject);
 
             menuButton.Items.Add(menuButtonChildOne);
             menuButton.Items.Add(menuButtonChildTwo);
@@ -136,9 +136,9 @@ namespace IpsSampleClientPlugin
         }
 
         /// <summary>
-        /// Пример создания нового объекта
+        /// Пример создания нового объекта при помощи стандартного диалогового окна IPS
         /// </summary>
-        private static void CreateNewIpsObject(object sender, EventArgs eventArgs)
+        private void CreateNewIpsObjectWithDialogWindow(object sender, EventArgs eventArgs)
         {
             // Получаем из контейнера сервисов ссылку на сервис для создания новых объектов IPS
             IObjectCreatorService ipsCreatorService = ApplicationServices.Container.GetService(typeof(IObjectCreatorService)) as IObjectCreatorService;
@@ -156,7 +156,7 @@ namespace IpsSampleClientPlugin
             // NB: приведены два примера для получения ссылки - "из документации" (закомментирован) и найденный с помощью подсказок Visual Studio. Второй симпатишнее что ли...
             // INotificationService ipsNotificationService = ApplicationServices.Container.GetService(typeof(INotificationService)) as INotificationService;
             INotificationService ipsNotificationService = ApplicationServices.Container.GetService<INotificationService>();
-            
+
             // Создаём уведомление о том, что новый объект создан
             // Очень увлекательно поизучать статический класс NotificationEventNames
             DBObjectsEventArgs dBObjectsEventArgs = new DBObjectsEventArgs(NotificationEventNames.ObjectsCreated, createdObjectId);
@@ -172,12 +172,62 @@ namespace IpsSampleClientPlugin
         }
 
         /// <summary>
+        /// Пример создания нового объекта конкретного типа ("Прочие изделия") без вызова диалогового окна
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="eventArgs"></param>
+        private void CreateNewObject(object sender, EventArgs eventArgs)
+        {
+            // Получаем идентификатор версии нового объекта - ДО создания самого объекта
+            long createdPkiId = Consts.NavigatorUndefinedObjectID;
+
+            // Обращение к базе данных IPS
+            using (SessionKeeper keeper = new SessionKeeper())
+            {
+                // Получаем из метаданных идентификатор объекта "Прочие изделия"
+                int pkiObjectType = MetaDataHelper.GetObjectTypeID(SystemGUIDs.objtypeOtherProducts);
+
+                // Получаем коллекцию объектов определённого типа (типа "Прочие изделия")
+                IDBObjectCollection pkiCollection = keeper.Session.GetObjectCollection(pkiObjectType);
+
+                // Создаём "болванку" нового объекта типа "Прочие изделия"
+                IDBObject createdPki = pkiCollection.Create();
+
+                // Ищем у создаваемого объекта атрибут
+                // Возможен поиск по: а) имени, б) псевдониму, в) идентификатору IPS, г) GUID-у
+                IDBAttribute createdPkiAttribute = createdPki.Attributes.FindByGUID(new Guid(SystemGUIDs.attributeName));
+
+                // Если атрибут найден - задаём ему значение
+                if (createdPkiAttribute != null)
+                {
+                    createdPkiAttribute.Value = "Пример нового объекта ПКИ";
+                }
+
+                // Создаём "полноценный" объект IPS из болванки. Если в метод передано значение true - болванка будет удалена
+                // Вторая перегрузка данного метода позволяет определять - будет ли взят на редактирование созданный объект, или нет
+                createdPki.CommitCreation(true);
+
+                // Получаем "правильный" идентификатор версии нового объекта, присвоенный IPS
+                createdPkiId = createdPki.ObjectID;
+            }
+
+            if (createdPkiId == Consts.UnknownObjectId || createdPkiId == -1)
+            {
+                MessageBox.Show("В процессе создания объекта ПКИ возникла ошибка");
+            }
+            else
+            {
+                MessageBox.Show($"Успешно создан новый объект ПКИ c идентификатором: {createdPkiId}");
+            }
+        }
+
+        /// <summary>
         /// Простой вывод окна WinForms
         /// Очень помогает, когда нужно проверить, работает ли что-то, или нет
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private static void ShowHelloMessage(object sender, EventArgs e)
+        private void ShowHelloMessage(object sender, EventArgs e)
         {
             MessageBox.Show("Это сообщение вызвано обработчиком события IPS");
         }
