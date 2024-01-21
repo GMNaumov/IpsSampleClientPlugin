@@ -1,11 +1,14 @@
 ﻿using Intermech;
 using Intermech.Bars;
 using IPSClientNavigator = Intermech.Navigator;
+using IPSToolbar = Intermech.Bars.ToolBar;
 using Intermech.Interfaces;
 using Intermech.Interfaces.Client;
 using Intermech.Interfaces.Plugins;
 using System;
 using System.Windows.Forms;
+using System.Security.Cryptography;
+using System.Drawing;
 
 namespace IpsSampleClientPlugin
 {
@@ -13,6 +16,9 @@ namespace IpsSampleClientPlugin
     {
         // Имя, отображаемое в описании модуля расширения 
         public string Name => "Пример клиентского расширения IPS";
+
+        // Определяем GUID-ы элементов, которые будут созданы в коде клиентского плагина
+        private static readonly Guid toolBarGuid = new Guid("{7244C45A-2AC3-4566-8A8F-60361A8284F6}");
 
         internal static IServiceProvider ipsServiseProvider;
 
@@ -28,6 +34,8 @@ namespace IpsSampleClientPlugin
             AddNewButtonInExistsMenu();
 
             AddNewButtonInExistsMenuWithChilds();
+
+            CreateNewToolBar();
         }
 
         /// <summary>
@@ -112,12 +120,12 @@ namespace IpsSampleClientPlugin
             // Определяет, будет ли элемент начинать новую группу в меню
             menuButton.BeginGroup = true;
 
-            MenuButtonItem menuButtonChildOne = new MenuButtonItem("Пример кнопки подменю #1");
+            MenuButtonItem menuButtonChildOne = new MenuButtonItem("Cоздание нового объекта с диалогом IPS");
 
             // Определяем обработчик события нажатия на созданную кнопку
             menuButtonChildOne.Click += new EventHandler(CreateNewIpsObjectWithDialogWindow);
 
-            MenuButtonItem menuButtonChildTwo = new MenuButtonItem("Пример кнопки подменю #2");
+            MenuButtonItem menuButtonChildTwo = new MenuButtonItem("Создание нового ПКИ без окна диалога");
             menuButtonChildTwo.Click += new EventHandler(CreateNewObject);
 
             menuButton.Items.Add(menuButtonChildOne);
@@ -127,12 +135,76 @@ namespace IpsSampleClientPlugin
         }
 
         /// <summary>
-        /// Метод интерфейса IPackage. 
-        /// В новых версиях IPS не используется, оставлен для совместимости.
+        /// Пример создания пользовательской панели инструментов
         /// </summary>
-        public void Unload()
+        private void CreateNewToolBar()
         {
+            // Получение ссылки на менеджер меню, панелей и инструментов IPS
+            BarManager barManager = ApplicationServices.Container.GetService<BarManager>();
 
+            // Получаем ссылку на сервис значков для элементов интерфейса IPS
+            INamedImageList images = ApplicationServices.Container.GetService<INamedImageList>();
+
+            // Создаём новую панель инструментов
+            // Алиас IPSToolbar используется для исключения конфликтов с классом ToolBar стандартной библиотеки Windows.Forms
+            IPSToolbar toolBar = new IPSToolbar();
+            
+            // Определяем имя элемента, которое будет использоваться в поиске по элементам управления IPS
+            toolBar.Name = "IPSSampleClient.NewToolbar";
+
+            // Определяем текст, который будет отображаться в клиенте IPS
+            toolBar.Text = "Пример клиентского плагина IPS";
+
+            toolBar.ImageList = images.ImageList;
+            
+            //Присваиваем новой панели инструментов Guid
+            // Самый надёжный вариант - прибить гвоздями readonly-поле класса
+            toolBar.Guid = toolBarGuid;
+
+            // Скрываем кнопку "Добавить/удалить кнопки"
+            toolBar.AddRemoveButtonsVisible = false;
+
+            // Разрешаем вертикальный докинг
+            toolBar.AllowVerticalDock = true;
+
+            // Разрешаем горизонтальный докинг
+            toolBar.AllowHorizontalDock = true;
+
+            // Отображаем только полные меню
+            toolBar.FullMenus = true;
+
+            // Определяем размер "непридоченной" панели инструментов
+            toolBar.MinimumFloatingSize = new Size(250, 30);
+
+            // Определяем размер "придоченной" панели инструментов
+            toolBar.Size = new Size(400, 30);
+
+            // Создаём новую кнопку для кастомной панели инструментов
+            ButtonItem buttonItem = new ButtonItem();
+            buttonItem.CommandName = "ToolBarButtonSample";
+            buttonItem.Text = "Кнопка #1";
+            buttonItem.ToolTipText = "Пример пользовательской кнопки на панели инструментов";
+            buttonItem.Click += new EventHandler(ShowHelloMessage);
+
+            // Добавляем кнопку на панель инструментов
+            // Метод AddRange() позволяет добавить несколько кнопок, для добавления одной кнопки можно использовать Add()
+            toolBar.Items.AddRange(new ToolbarItemBase[]
+                {
+                    buttonItem
+                }
+            );
+
+            // Добавляем новую панель инструментов
+            barManager.AddToolbar(toolBar);
+            toolBar.Parent = barManager.FindSuitableContainer(DockStyle.Top);
+
+            // Определение параметров докинга новой панели инструментов
+            toolBar.DockLine = 2;
+            toolBar.DockOffset = 0;
+            toolBar.Location = new Point(0, 0);
+
+            toolBar.Hidden = false;
+            toolBar.Visible = true;
         }
 
         /// <summary>
@@ -200,7 +272,7 @@ namespace IpsSampleClientPlugin
                 // Если атрибут найден - задаём ему значение
                 if (createdPkiAttribute != null)
                 {
-                    createdPkiAttribute.Value = "Пример нового объекта ПКИ";
+                    createdPkiAttribute.Value = $"Пример нового объекта ПКИ";
                 }
 
                 // Создаём "полноценный" объект IPS из болванки. Если в метод передано значение true - болванка будет удалена
@@ -230,6 +302,15 @@ namespace IpsSampleClientPlugin
         private void ShowHelloMessage(object sender, EventArgs e)
         {
             MessageBox.Show("Это сообщение вызвано обработчиком события IPS");
+        }
+
+        /// <summary>
+        /// Метод интерфейса IPackage. 
+        /// В новых версиях IPS не используется, оставлен для совместимости.
+        /// </summary>
+        public void Unload()
+        {
+
         }
     }
 }
