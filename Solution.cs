@@ -9,6 +9,8 @@ using System;
 using System.Windows.Forms;
 using System.Security.Cryptography;
 using System.Drawing;
+using Intermech.Navigator.Interfaces;
+using Intermech.Navigator.ContextMenu;
 
 namespace IpsSampleClientPlugin
 {
@@ -36,6 +38,8 @@ namespace IpsSampleClientPlugin
             AddNewButtonInExistsMenuWithChilds();
 
             CreateNewToolBar();
+
+            CreateNewItemInContextMenu();
         }
 
         /// <summary>
@@ -291,6 +295,30 @@ namespace IpsSampleClientPlugin
             {
                 MessageBox.Show($"Успешно создан новый объект ПКИ c идентификатором: {createdPkiId}");
             }
+        }
+
+        /// <summary>
+        /// Пример создания нового контекстного меню
+        /// </summary>
+        public void CreateNewItemInContextMenu()
+        {
+            // Получаем ссылку на службу регистрации расширений для Навигатора IPS
+            IFactory factory = ApplicationServices.Container.GetService<IFactory>();
+
+            // Ищем пункт "Создать" в контекстном меню
+            MenuTemplateNode createNode = factory.ContextMenuTemplate["Create"];
+
+            // Не нашли пункт в конекстном меню - вышли
+            if (createNode == null) 
+            {
+                return;
+            }
+
+            // Создаём новый элемент в меню
+            MenuTemplateNode templateNode = new MenuTemplateNode("CreateCopy", "Создать копию", -1, 20, int.MaxValue);
+
+            // Добавляем созданный элемент в группу "Создать"
+            createNode.Nodes.Add(templateNode);
         }
 
         /// <summary>
