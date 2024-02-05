@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Drawing;
 using Intermech.Navigator.Interfaces;
 using Intermech.Navigator.ContextMenu;
+using Intermech.DataFormats;
 
 namespace IpsSampleClientPlugin
 {
@@ -305,6 +306,8 @@ namespace IpsSampleClientPlugin
             // Получаем ссылку на службу регистрации расширений для Навигатора IPS
             IFactory factory = ApplicationServices.Container.GetService<IFactory>();
 
+            INamedImageList imageList = ApplicationServices.Container.GetService<INamedImageList>();
+
             // Ищем пункт "Создать" в контекстном меню
             MenuTemplateNode createNode = factory.ContextMenuTemplate["Create"];
 
@@ -314,11 +317,10 @@ namespace IpsSampleClientPlugin
                 return;
             }
 
-            // Создаём новый элемент в меню
-            MenuTemplateNode templateNode = new MenuTemplateNode("CreateCopy", "Создать копию", -1, 20, int.MaxValue);
+            MenuTemplateNode newNode = new MenuTemplateNode("NewNode2", "Новый раздел", imageList.ImageIndex("imgSamples.CopyObject"), int.MaxValue, int.MaxValue);
 
-            // Добавляем созданный элемент в группу "Создать"
-            createNode.Nodes.Add(templateNode);
+            factory.ContextMenuTemplate.Nodes.Add(newNode);
+            factory.AddCommandsProvider(Consts.CategoryObjectVersion, new SampleCommandProvider());
         }
 
         /// <summary>
@@ -339,6 +341,40 @@ namespace IpsSampleClientPlugin
         public void Unload()
         {
 
+        }
+
+        /// <summary>
+        /// Пример добавления нового пункта в контекстное меню с простейшей логикой
+        /// </summary>
+        internal class SampleCommandProvider : ICommandsProvider
+        {
+            public CommandsInfo GetGroupCommands(ISelectedItems items, IServiceProvider viewServices) => new CommandsInfo();
+
+            public CommandsInfo GetMergedCommands(ISelectedItems items, IServiceProvider viewServices)
+            {
+                CommandsInfo commandsInfo = new CommandsInfo();
+
+                if (items != null && items.Count == 1)
+                {
+                    IDBTypedObjectID objectID = items.GetItemData(0, typeof(IDBTypedObjectID)) as IDBTypedObjectID;
+
+                    if (objectID != null) 
+                    {
+                        int desktopObjectTypeId = MetaDataHelper.GetObjectTypeID(SystemGUIDs.objtypeWorkspace);
+                        if (objectID.ObjectType != desktopObjectTypeId)
+                        {
+                            commandsInfo.Add("NewNode2", new CommandInfo(TriggerPriority.Basic, new ClickEventHandler(Message)));
+                        }
+                    }
+                }
+
+                return commandsInfo;
+            }
+
+            internal static void Message(ISelectedItems items, IServiceProvider serviceProvider, object AdditionalInfo)
+            {
+                MessageBox.Show("Wassap!");
+            }
         }
     }
 }
