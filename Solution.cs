@@ -21,8 +21,10 @@ namespace IpsSampleClientPlugin
         public string Name => "Пример клиентского расширения IPS";
 
         // Определяем GUID-ы элементов, которые будут созданы в коде клиентского плагина
+        // Пример см. в методе CreateNewToolBar()
         private static readonly Guid toolBarGuid = new Guid("{7244C45A-2AC3-4566-8A8F-60361A8284F6}");
 
+        // Статическое поле, через которое будет осуществляться обращение ко всем сервисам IPS
         internal static IServiceProvider ipsServiseProvider;
 
 
@@ -57,6 +59,7 @@ namespace IpsSampleClientPlugin
         /// </summary>
         private void AddNewMenuWithButtons()
         {
+            // Получаем ссылку на сервис управления главным меню IPS
             BarManager barManager = ipsServiseProvider.GetService(typeof(BarManager)) as BarManager;
 
             // Получаем ссылку на главное меню IPS
@@ -163,7 +166,7 @@ namespace IpsSampleClientPlugin
             toolBar.ImageList = images.ImageList;
             
             //Присваиваем новой панели инструментов Guid
-            // Самый надёжный вариант - прибить гвоздями readonly-поле класса
+            // Самый надёжный вариант - прибить гвоздями значение в readonly-поле класса
             toolBar.Guid = toolBarGuid;
 
             // Скрываем кнопку "Добавить/удалить кнопки"
@@ -306,6 +309,7 @@ namespace IpsSampleClientPlugin
             // Получаем ссылку на службу регистрации расширений для Навигатора IPS
             IFactory factory = ApplicationServices.Container.GetService<IFactory>();
 
+            // Получаем ссылку на службу именованых изображений (...ещё бы разобраться, как оно работает)
             INamedImageList imageList = ApplicationServices.Container.GetService<INamedImageList>();
 
             // Ищем пункт "Создать" в контекстном меню
